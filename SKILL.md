@@ -31,15 +31,41 @@ metadata:
 ## Использование
 
 ```bash
-# Базовый вызов — создаёт дашборд с дефолтной структурой (бриф на 8 секций)
-python3 ~/.openclaw/workspace/skills/dashboard/scripts/generate.py -z
-
-# Создать и сразу запаковать в ZIP
-python3 ~/.openclaw/workspace/skills/dashboard/scripts/generate.py -z -o my-dashboard
-
-# Без ZIP (просто HTML)
-python3 ~/.openclaw/workspace/skills/dashboard/scripts/generate.py -o my-dashboard.html
+# Создать дашборд из JSON-файла
+python3 ~/.openclaw/workspace/skills/dashboard/scripts/generate.py -d data.json -z -o my-dashboard
 ```
+
+## Структура JSON
+
+```json
+{
+  "title": "Название дашборда",
+  "tabs": [
+    {
+      "id": "tab1",
+      "name": "1. Раздел",
+      "items": [
+        {
+          "id": "1.1",
+          "text": "1.1. Вопрос",
+          "hint": "Подсказка (опционально)",
+          "type": "text|textarea|checklist|priority",
+          "options": ["Вариант1", "Вариант2"],
+          "checked": [],
+          "value": ""
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Типы полей
+
+- **text** — однострочное поле
+- **textarea** — многострочное поле  
+- **checklist** — чекбоксы (options = варианты)
+- **priority** — приоритеты с нумерацией
 
 ## Важно: отправка архива
 
