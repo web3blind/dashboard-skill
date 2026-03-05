@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Бриф на ИИ</title>
+<style>
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --border: #ddd;
+  --text: #333;
+  --text-dim: #666;
+  --accent: #0066cc;
+  --accent-dim: #e6f0ff;
+  --success: #28a745;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a1a;
+    --surface: #2d2d2d;
+    --border: #444;
+    --text: #e0e0e0;
+    --text-dim: #aaa;
+    --accent: #4da6ff;
+    --accent-dim: #1a3a5c;
+    --success: #4caf50;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 20px; }
+.container { max-width: 1000px; margin: 0 auto; }
+
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.header h1 { font-size: 24px; }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { padding: 8px 16px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; border-radius: 4px; font-size: 14px; }
+.btn:hover { background: var(--accent-dim); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+.tab { padding: 12px 20px; cursor: pointer; border: none; background: none; color: var(--text-dim); font-size: 14px; white-space: nowrap; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -2px; font-weight: 600; }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.section-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+.field-hint { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 8px; font-style: italic; }
+
+.checkbox-item { display: flex;-start; gap: 10px; padding: 8px 0; align-items: flex border-bottom: 1px solid var(--border); }
+.checkbox-item:last-child { border-bottom: none; }
+.checkbox-item input[type="checkbox"] { margin-top: 4px; accent-color: var(--accent); }
+.checkbox-item label { flex: 1; cursor: pointer; }
+.checkbox-item.checked label { text-decoration: line-through; color: var(--text-dim); }
+
+.priority-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.priority-row label { flex: 1; }
+.priority-input { width: 60px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 14px; }
+
+.text-input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 14px; margin-bottom: 12px; display: block; }
+.text-input:last-child { margin-bottom: 0; }
+
+.progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 10px 0; }
+.progress-fill { height: 100%; background: var(--success); transition: width 0.3s; }
+#importFile { display: none; }
+
+.summary { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; min-width: 150px; }
+.summary-card h3 { font-size: 14px; color: var(--text-dim); margin-bottom: 4px; }
+.summary-card p { font-size: 24px; font-weight: 700; }
+
+@media print { .header-actions, .tabs { display: none; } }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+  <h1 id="dashboardTitle">Бриф на ИИ</h1>
+  <div class="header-actions">
+    <button class="btn" onclick="exportData()">Экспорт JSON</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">Импорт JSON</button>
+    <input type="file" id="importFile" accept=".json" onchange="importData(event)">
+  </div>
+</div>
+
+<div class="summary" id="summary"></div>
+<div class="tabs" id="tabs"></div>
+<div id="content"></div>
+</div>
+
+<script>
+const DEFAULT_DATA = {
+  title: "Бриф на ИИ",
+  tabs: [
+    { id: "company", name: "1. О компании", items: [
+      { id: "1.1", text: "1.1. Количество сотрудников", hint: "Включая фрилансеров", type: "text", value: "" },
+      { id: "1.2", text: "1.2. Структура команды", type: "checklist", options: ["Основатели/руководство", "Менеджеры", "Маркетинг", "Администрация", "Техподдержка"], checked: [] },
+      { id: "1.3", text: "1.3. Ключевые показатели", hint: "Заявки, конверсия, чек, LTV, NPS", type: "text", value: "" },
+      { id: "1.4", text: "1.4. Объём заявок в месяц", type: "text", value: "" },
+      { id: "1.5", text: "1.5. Страны-источники", type: "text", value: "" }
+    ]},
+    { id: "sales", name: "2. Продажи", items: [
+      { id: "2.1", text: "2.1. Каналы лидов", type: "checklist", options: ["Сайт", "Контекст", "Соцсети", "Рекомендации", "Партнёрки", "Мессенджеры"], checked: [] },
+      { id: "2.2", text: "2.2. Путь клиента", hint: "Этапы, ответственные", type: "text", value: "" },
+      { id: "2.3", text: "2.3. Тип консультации", type: "checklist", options: ["Звонок", "Видео", "Переписка", "Встреча"], checked: [] },
+      { id: "2.4", text: "2.4. Время до оплаты", type: "text", value: "" },
+      { id: "2.5", text: "2.5. Конверсия (%)", type: "text", value: "" },
+      { id: "2.6", text: "2.6. Причины отказов", hint: "Цена, срок, конкурент", type: "text", value: "" }
+    ]},
+    { id: "crm", name: "3. CRM", items: [
+      { id: "3.1", text: "3.1. CRM-система", type: "checklist", options: ["Bitrix24", "AmoCRM", "HubSpot", "Google Таблицы", "Нет"], checked: [] },
+      { id: "3.2", text: "3.2. Учёт клиентов", hint: "Где фиксируются", type: "text", value: "" },
+      { id: "3.3", text: "3.3. Каналы связи", type: "checklist", options: ["WhatsApp", "Telegram", "Email", "Телефон"], checked: [] },
+      { id: "3.4", text: "3.4. Шаблоны", hint: "Формат, где хранятся", type: "text", value: "" },
+      { id: "3.5", text: "3.5. Время ответа", type: "text", value: "" },
+      { id: "3.6", text: "3.6. Автоуведомления", type: "checklist", options: ["Email", "Автоответчики", "Нет"], checked: [] }
+    ]},
+    { id: "docs", name: "4. Документы", items: [
+      { id: "4.1", text: "4.1. Документы", type: "checklist", options: ["Договор", "Мотивационное письмо", "Пакет вуза", "Визовые", "Перевод"], checked: [] },
+      { id: "4.2", text: "4.2. Хранение", hint: "Drive, локально, облако", type: "text", value: "" },
+      { id: "4.3", text: "4.3. Время на клиента", type: "text", value: "" },
+      { id: "4.4", text: "4.4. Повторяющиеся", type: "checklist", options: ["Письма", "Заявления", "Сопроводительные", "Переводы", "Договоры"], checked: [] },
+      { id: "4.5", text: "4.5. Типовые ошибки", hint: "Что тормозит", type: "text", value: "" }
+    ]},
+    { id: "marketing", name: "5. Маркетинг", items: [
+      { id: "5.1", text: "5.1. Каналы", type: "checklist", options: ["Instagram", "TikTok", "YouTube", "Telegram", "Блог", "SEO", "Реклама"], checked: [] },
+      { id: "5.2", text: "5.2. Кто делает", hint: "Штат, фрилансер, агентство", type: "text", value: "" },
+      { id: "5.3", text: "5.3. Частота", type: "text", value: "" },
+      { id: "5.4", text: "5.4. Затраты времени", hint: "Самое затратное", type: "text", value: "" },
+      { id: "5.5", text: "5.5. Аналитика", hint: "Метрика, Analytics", type: "text", value: "" }
+    ]},
+    { id: "universities", name: "6. Университеты", items: [
+      { id: "6.1", text: "6.1. Взаимодействие", hint: "Кто, как, каналы", type: "text", value: "" },
+      { id: "6.2", text: "6.2. Дедлайны", hint: "Календарь, напоминания", type: "text", value: "" },
+      { id: "6.3", text: "6.3. Обновление", hint: "Кто и как часто", type: "text", value: "" },
+      { id: "6.4", text: "6.4. База знаний", hint: "Требования, стоимость", type: "text", value: "" }
+    ]},
+    { id: "tools", name: "7. Инструменты", items: [
+      { id: "7.1", text: "7.1. Ежедневные", hint: "Google, Notion, Slack", type: "text", value: "" },
+      { id: "7.2", text: "7.2. ИИ-инструменты", type: "checklist", options: ["Да, активно", "Иногда", "Пробовали", "Нет"], checked: [] },
+      { id: "7.3", text: "7.3. Интеграции", hint: "Сайт→CRM", type: "text", value: "" },
+      { id: "7.4", text: "7.4. Ручные процессы", hint: "Более 3 раз", type: "text", value: "" }
+    ]},
+    { id: "problems", name: "8. Проблемы", items: [
+      { id: "8.1", hint: "Время, энергия, деньги", type: "text", value: "" },
+      { id: "8.2", hint: "Первоочередное", type: "text", value: "" },
+      { id: "8.3", text: "8.3. Приоритеты", hint: "1 — важное", type: "priority", options: ["Ускорение заявок", "Автоматизация документов", "Улучшение маркетинга", "Работа с вузами", "Внедрение CRM", "Автоматизация связи", "Аналитика"], values: {} },
+      { id: "8.4", hint: "Результаты", type: "text", value: "" },
+      { id: "8.5", hint: "Через 3-6 месяцев", type: "text", value: "" }
+    ]}
+  ]
+};
+
+let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+function loadFromStorage() {
+  // Generate unique storage key from title
+  const storageKey = 'dashboard_' + (data.title || 'default').toLowerCase().replace(/[^a-zа-я0-9]/g, '_').substring(0, 30);
+  
+  const saved = localStorage.getItem(storageKey);
+  if (saved) {
+    try { data = { ...DEFAULT_DATA, ...JSON.parse(saved) }; } catch (e) {}
+  }
+}
+
+function saveToStorage() {
+  localStorage.setItem(storageKey, JSON.stringify(data));
+}
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = data.tabs.map((t, i) => 
+    `<button class="tab ${i===0?'active':''}" data-tab="${t.id}">${t.name}</button>`
+  ).join('');
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'content-' + id));
+}
+
+function renderContent() {
+  document.getElementById('content').innerHTML = data.tabs.map(t => `
+    <div class="tab-content" id="content-${t.id}">
+      ${t.items.map(i => renderItem(t.id, i)).join('')}
+    </div>
+  `).join('');
+  
+  data.tabs.forEach(t => t.items.forEach(i => {
+    if (i.type === 'text' || i.type === 'textarea') {
+      const el = document.getElementById(`${t.id}-${i.id}`);
+      if (el) el.addEventListener('input', () => { i.value = el.value; saveToStorage(); updateSummary(); });
+    } else if (i.type === 'checklist') {
+      i.options.forEach((_, idx) => {
+        const cb = document.getElementById(`${t.id}-${i.id}-${idx}`);
+        if (cb) cb.addEventListener('change', () => {
+          i.checked = i.checked || [];
+          i.checked.includes(idx) ? i.checked = i.checked.filter(x => x !== idx) : i.checked.push(idx);
+          saveToStorage(); updateSummary();
+        });
+      });
+    } else if (i.type === 'priority') {
+      i.options.forEach((_, idx) => {
+        const inp = document.getElementById(`${t.id}-${i.id}-p${idx}`);
+        if (inp) inp.addEventListener('change', () => {
+          i.values = i.values || {};
+          const v = parseInt(inp.value);
+          if (v > 0) { Object.keys(i.values).forEach(k => { if (i.values[k] === v && k != idx) delete i.values[k]; }); i.values[idx] = v; }
+          else delete i.values[idx];
+          saveToStorage();
+        });
+      });
+    }
+  }));
+  updateSummary();
+}
+
+function renderItem(tabId, item) {
+  let h = `<div class="section"><div class="section-title">${item.text}</div>`;
+  if (item.hint && !item.hint.includes(item.text)) h += `<span class="field-hint">${item.hint}</span>`;
+  
+  if (item.type === 'text' || item.type === 'textarea') {
+    // Auto-detect: if hint contains commas/semicolons, use textarea
+    const needsTextarea = item.hint && /[,;]/.test(item.hint);
+    const actualType = needsTextarea || item.type === 'textarea' ? 'textarea' : 'text';
+    const rows = needsTextarea ? 4 : 1;
+    const ariaLabel = item.text;
+    if (actualType === 'textarea') {
+      h += `<textarea class="text-input" id="${tabId}-${item.id}" rows="${rows}" placeholder="Введите значение..." aria-label="${ariaLabel}">${item.value||''}</textarea>`;
+    } else {
+      h += `<input type="text" class="text-input" id="${tabId}-${item.id}" value="${item.value||''}" placeholder="Введите значение..." aria-label="${ariaLabel}">`;
+    }
+  } else if (item.type === 'checklist') {
+    (item.checked || []).forEach(c => { if (typeof c !== 'number') c = parseInt(c); });
+    h += item.options.map((o, i) => `<div class="checkbox-item ${(item.checked||[]).includes(i)?'checked':''}"><input type="checkbox" id="${tabId}-${item.id}-${i}" ${(item.checked||[]).includes(i)?'checked':''}><label for="${tabId}-${item.id}-${i}">${o}</label></div>`).join('');
+  } else if (item.type === 'priority') {
+    h += item.options.map((o, i) => `<div class="priority-row"><label>${o}</label><input type="number" class="priority-input" id="${tabId}-${item.id}-p${i}" min="1" max="7" value="${(item.values||{})[i]||''}" placeholder="#"></div>`).join('');
+  }
+  return h + '</div>';
+}
+
+function updateSummary() {
+  let total = 0, filled = 0, checked = 0, totalCheck = 0;
+  data.tabs.forEach(t => t.items.forEach(i => {
+    total++;
+    if (i.type === 'text' || i.type === 'textarea') { if (i.value?.trim()) filled++; }
+    else if (i.type === 'checklist') { totalCheck += i.options.length; checked += (i.checked||[]).length; if ((i.checked||[]).length) filled++; }
+    else if (i.type === 'priority') { if (i.values && Object.keys(i.values).length) filled++; }
+  }));
+  const pct = total ? Math.round(filled/total*100) : 0;
+  document.getElementById('summary').innerHTML = `
+    <div class="summary-card"><h3>Прогресс</h3><p>${pct}%</p><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>
+    <div class="summary-card"><h3>Заполнено</h3><p>${filled}/${total}</p></div>
+    <div class="summary-card"><h3>Галочки</h3><p>${checked}/${totalCheck}</p></div>`;
+}
+
+function exportData() {
+  const b = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'dashboard.json'; a.click();
+}
+
+function importData(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = function(ev) { try { data = {...DEFAULT_DATA, ...JSON.parse(ev.target.result)}; saveToStorage(); render(); } catch { alert('Ошибка'); } };
+  r.readAsText(f); e.target.value = '';
+}
+
+function render() {
+  document.getElementById('dashboardTitle').textContent = data.title;
+  renderTabs(); renderContent(); switchTab(data.tabs[0].id);
+}
+
+loadFromStorage(); render();
+</script>
+</body>
+</html>
