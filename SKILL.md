@@ -32,7 +32,7 @@ metadata:
 
 ```bash
 # Создать дашборд из JSON-файла
-python3 ~/.openclaw/workspace/skills/dashboard/scripts/generate.py -d data.json -z -o my-dashboard
+python3 ~/.hermes/skills/dashboard/scripts/generate.py -d data.json -z -o my-dashboard
 ```
 
 ## Структура JSON
